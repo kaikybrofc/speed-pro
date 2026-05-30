@@ -12,7 +12,7 @@ Projeto inicial para executar o `speedtest.py` com scripts via npm.
 - `npm run start`: executa o speed test
 - `npm run speedtest`: alias para executar o speed test
 - `npm run record`: executa o speed test e salva no histórico (`data/history.jsonl` e `data/history.csv`)
-- `npm run report`: gera relatório com médias, melhor/pior e tendência de 7/30 dias
+- `npm run report`: gera relatório analítico avançado (score, percentis, estabilidade, heatmap, SLA, correlação)
 - `npm run monitor`: inicia monitor contínuo local (teste automático a cada 30 minutos)
 - `npm run monitor:install`: instala e inicia serviço automático (`systemd --user`) com intervalo de 30 minutos
 - `npm run monitor:uninstall`: remove serviço automático
@@ -31,6 +31,17 @@ Fluxo recomendado:
 
 1. Rode `npm run record` sempre que quiser registrar uma medição.
 2. Rode `npm run report` para analisar desempenho médio e tendência.
+
+O relatório inclui:
+
+- score de qualidade da internet (0-100) com ping, jitter, throughput e perda
+- percentis p50/p95/p99 de latência, jitter e velocidades
+- estabilidade por faixa horária (madrugada/manhã/tarde/noite)
+- heatmap semanal de performance por hora
+- comparação automática entre plano/provedor/IP
+- detecção de hora ideal/ruim para reuniões, jogos e upload
+- modo SLA doméstico em histórico, com supressão por carga local alta
+- correlação entre uso de CPU/RAM e qualidade da rede
 
 ## Monitoramento Automático
 
@@ -58,6 +69,25 @@ Se quiser que rode mesmo sem login ativo, habilite linger:
 
 ```bash
 sudo loginctl enable-linger $USER
+```
+
+Modo SLA no monitor contínuo:
+
+```bash
+python3 scripts/speedtest_monitor.py \
+  --interval-minutes 10 \
+  --sla-mode \
+  --sla-min-download-mbps 100 \
+  --sla-min-upload-mbps 20 \
+  --sla-max-ping-ms 80 \
+  --sla-max-packet-loss-pct 2 \
+  --sla-window-minutes 30
+```
+
+Registro enriquecido com perda de pacote e plano:
+
+```bash
+python3 scripts/speedtest_record.py --plan "fibra-500" --ping-target 1.1.1.1
 ```
 
 ## Direitos e Créditos

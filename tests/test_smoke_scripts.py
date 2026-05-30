@@ -51,6 +51,22 @@ def test_record_smoke_writes_history_files(tmp_path, monkeypatch, capsys):
         "run_speedtest_json",
         lambda: _sample_payload(timestamp),
     )
+    monkeypatch.setattr(speedtest_record.sys, "argv", ["speedtest_record.py"])
+    monkeypatch.setattr(
+        speedtest_record,
+        "run_ping_probe",
+        lambda **_kwargs: {
+            "target": "1.1.1.1",
+            "packet_loss_pct": 0.0,
+            "avg_latency_ms": 15.0,
+            "jitter_ms": 2.0,
+            "transmitted": 8,
+            "received": 8,
+            "error": None,
+        },
+    )
+    monkeypatch.setattr(speedtest_record, "get_cpu_usage_percent", lambda: 35.0)
+    monkeypatch.setattr(speedtest_record, "get_ram_usage_percent", lambda: 48.0)
 
     exit_code = speedtest_record.main()
     captured = capsys.readouterr()
@@ -64,6 +80,8 @@ def test_record_smoke_writes_history_files(tmp_path, monkeypatch, capsys):
     assert record["timestamp"] == timestamp
     assert record["download_mbps"] == 250.0
     assert record["upload_mbps"] == 125.0
+    assert record["quality_score"] > 0
+    assert record["packet_loss_pct_avg"] == 0.0
 
     with csv_path.open("r", encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))
@@ -98,6 +116,7 @@ def test_report_smoke_renders_summary(tmp_path, monkeypatch, capsys):
     )
 
     monkeypatch.setattr(speedtest_report, "JSONL_PATH", history_path)
+    monkeypatch.setattr(speedtest_report.sys, "argv", ["speedtest_report.py"])
 
     exit_code = speedtest_report.main()
     captured = capsys.readouterr()
@@ -107,6 +126,9 @@ def test_report_smoke_renders_summary(tmp_path, monkeypatch, capsys):
     assert "- Total de testes: 2" in captured.out
     assert "Tendencia 7 dias" in captured.out
     assert "Medias gerais" in captured.out
+    assert "Percentis (p50/p95/p99)" in captured.out
+    assert "Heatmap semanal de performance por hora" in captured.out
+    assert "Modo SLA domestico (historico)" in captured.out
 
 
 def test_monitor_smoke_runs_single_cycle(monkeypatch, capsys):
@@ -129,9 +151,20 @@ def test_monitor_smoke_runs_single_cycle(monkeypatch, capsys):
         ],
     )
 
-    def _fake_run_record_once() -> int:
+    def _fake_run_record_once(_args):
         calls.append(1)
-        return 0
+        return (
+            0,
+            {
+                "timestamp": "2026-05-30T19:10:00Z",
+                "download_mbps": 250.0,
+                "upload_mbps": 120.0,
+                "ping_ms": 20.0,
+                "packet_loss_pct_avg": 0.0,
+                "system_cpu_percent": 30.0,
+                "system_ram_percent": 40.0,
+            },
+        )
 
     monkeypatch.setattr(
         speedtest_monitor,

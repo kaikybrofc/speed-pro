@@ -1,0 +1,26 @@
+{
+  "name": "speed-pro",
+  "version": "1.0.0",
+  "description": "Projeto inicial para testes de velocidade com script Python",
+  "scripts": {
+    "start": "python3 speedtest.py",
+    "speedtest": "python3 speedtest.py",
+    "check": "python3 -m py_compile speedtest.py"
+  },
+  "keywords": [
+    "speedtest",
+    "network",
+    "cli",
+    "python"
+  ],
+  "author": "Kaiky Brito <kaikygomesribeiroof@gmail.com> (https://github.com/kaikybrofc)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kaikybrofc/speed-pro.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kaikybrofc/speed-pro/issues"
+  },
+  "homepage": "https://github.com/kaikybrofc/speed-pro#readme"
+}

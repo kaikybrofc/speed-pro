@@ -11,6 +11,7 @@ if str(ROOT_DIR) not in sys.path:
 import scripts.speedtest_monitor as speedtest_monitor
 import scripts.speedtest_record as speedtest_record
 import scripts.speedtest_report as speedtest_report
+import scripts.speedtest_dashboard as speedtest_dashboard
 
 
 def _sample_payload(timestamp: str) -> dict:
@@ -148,6 +149,7 @@ def test_monitor_smoke_runs_single_cycle(monkeypatch, capsys):
             "0.01",
             "--max-runs",
             "1",
+            "--no-dashboard",
         ],
     )
 
@@ -179,3 +181,53 @@ def test_monitor_smoke_runs_single_cycle(monkeypatch, capsys):
     assert len(calls) == 1
     assert "Monitor iniciado." in captured.out
     assert "Teste #1 concluido com sucesso." in captured.out
+
+
+def test_dashboard_payload_smoke(tmp_path, monkeypatch):
+    history_path = tmp_path / "history.jsonl"
+    history_path.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "timestamp": "2026-05-30T19:00:00Z",
+                        "download_mbps": 250.0,
+                        "upload_mbps": 120.0,
+                        "ping_ms": 18.0,
+                        "jitter_ms_avg": 2.2,
+                        "packet_loss_pct_avg": 0.1,
+                        "quality_score": 91.2,
+                        "client_isp": "ISP A",
+                        "client_ip": "10.0.0.1",
+                        "plan_name": "fibra-500",
+                    }
+                ),
+                json.dumps(
+                    {
+                        "timestamp": "2026-05-30T20:00:00Z",
+                        "download_mbps": 180.0,
+                        "upload_mbps": 90.0,
+                        "ping_ms": 24.0,
+                        "jitter_ms_avg": 4.2,
+                        "packet_loss_pct_avg": 0.4,
+                        "quality_score": 82.8,
+                        "client_isp": "ISP A",
+                        "client_ip": "10.0.0.1",
+                        "plan_name": "fibra-500",
+                        "system_cpu_percent": 65.0,
+                        "system_ram_percent": 70.0,
+                    }
+                ),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(speedtest_report, "JSONL_PATH", history_path)
+    payload = speedtest_dashboard.build_dashboard_payload(limit=100)
+
+    assert payload["meta"]["total_records"] == 2
+    assert payload["cards"]["latest"]["download_mbps"] == 180.0
+    assert "download_mbps" in payload["percentiles"]
+    assert len(payload["series"]) == 2

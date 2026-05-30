@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Speed Pro | Dashboard</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="bg-layer"></div>
+    <main class="layout">
+      <header class="hero">
+        <div class="hero-title">
+          <p class="kicker">Monitoramento Local</p>
+          <h1>Speed Pro Live Dashboard</h1>
+          <p class="subtitle">
+            Resumo em tempo real de performance, qualidade, SLA e estabilidade
+            da sua internet.
+          </p>
+        </div>
+        <div class="live-panel">
+          <div class="live-dot-wrap">
+            <span class="live-dot" id="liveDot"></span>
+            <strong>Ao Vivo</strong>
+          </div>
+          <p id="lastUpdate">Atualizando...</p>
+          <p id="sampleCount">0 amostras</p>
+        </div>
+      </header>
+
+      <section class="cards" id="cardsGrid"></section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Séries Temporais</h2>
+          <p>Últimos registros coletados</p>
+        </div>
+        <div class="charts-grid">
+          <article class="chart-card">
+            <h3>Download e Upload (Mbps)</h3>
+            <canvas id="throughputChart" width="900" height="260"></canvas>
+          </article>
+          <article class="chart-card">
+            <h3>Ping e Score de Qualidade</h3>
+            <canvas id="qualityChart" width="900" height="260"></canvas>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel panel-grid">
+        <article class="subpanel">
+          <div class="panel-head">
+            <h2>Percentis</h2>
+            <p>p50 / p95 / p99</p>
+          </div>
+          <div id="percentilesTable"></div>
+        </article>
+        <article class="subpanel">
+          <div class="panel-head">
+            <h2>Estabilidade por Faixa</h2>
+            <p>Madrugada, manhã, tarde e noite</p>
+          </div>
+          <div id="stabilityList"></div>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Heatmap Semanal por Hora</h2>
+          <p>Score médio por dia da semana e hora</p>
+        </div>
+        <div id="heatmapWrapper"></div>
+      </section>
+
+      <section class="panel panel-grid">
+        <article class="subpanel">
+          <div class="panel-head">
+            <h2>Comparação ISP / IP / Plano</h2>
+            <p>Ranking por score médio</p>
+          </div>
+          <div id="providerTable"></div>
+        </article>
+        <article class="subpanel">
+          <div class="panel-head">
+            <h2>SLA e Correlação</h2>
+            <p>Saúde da rede vs carga local</p>
+          </div>
+          <div class="chips" id="slaChips"></div>
+          <div class="chips" id="corrChips"></div>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Hora Ideal e Hora Ruim</h2>
+          <p>Com base no score médio por hora</p>
+        </div>
+        <div class="chips big" id="timeQuality"></div>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

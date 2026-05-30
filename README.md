@@ -13,7 +13,10 @@ Projeto inicial para executar o `speedtest.py` com scripts via npm.
 - `npm run speedtest`: alias para executar o speed test
 - `npm run record`: executa o speed test e salva no histórico (`data/history.jsonl` e `data/history.csv`)
 - `npm run report`: gera relatório analítico avançado (score, percentis, estabilidade, heatmap, SLA, correlação)
-- `npm run monitor`: inicia monitor contínuo local (teste automático a cada 30 minutos)
+- `npm run dashboard`: sobe painel local em tempo real em `http://127.0.0.1:8787`
+- `npm run dashboard:lan`: sobe painel acessível na rede local (`0.0.0.0:8787`)
+- `npm run monitor`: inicia monitor contínuo local (teste automático a cada 30 minutos) e sobe dashboard integrado
+- `npm run monitor:no-dashboard`: inicia monitor contínuo sem dashboard
 - `npm run monitor:install`: instala e inicia serviço automático (`systemd --user`) com intervalo de 30 minutos
 - `npm run monitor:uninstall`: remove serviço automático
 - `npm run monitor:status`: mostra status do serviço
@@ -43,6 +46,34 @@ O relatório inclui:
 - modo SLA doméstico em histórico, com supressão por carga local alta
 - correlação entre uso de CPU/RAM e qualidade da rede
 
+## Dashboard em Tempo Real
+
+Para abrir a página local com resumo vivo das métricas:
+
+```bash
+npm run dashboard
+```
+
+Acesse:
+
+- `http://127.0.0.1:8787`
+
+Para visualizar de outro dispositivo da mesma rede:
+
+```bash
+npm run dashboard:lan
+```
+
+O dashboard mostra em tempo real:
+
+- cards de estado atual (score, download/upload, ping, jitter, perda, CPU/RAM)
+- séries temporais de throughput e qualidade
+- percentis p50/p95/p99
+- estabilidade por faixa horária
+- heatmap semanal por hora
+- comparação plano/provedor/IP
+- SLA e correlações CPU/RAM
+
 ## Monitoramento Automático
 
 Para deixar o projeto executando testes periódicos automaticamente:
@@ -51,7 +82,13 @@ Para deixar o projeto executando testes periódicos automaticamente:
 2. Verifique status: `npm run monitor:status`
 3. Veja logs: `npm run monitor:logs`
 
-Por padrão, o intervalo é de 30 minutos.
+Por padrão, o intervalo é de 30 minutos e o monitor inicia o dashboard local em `http://127.0.0.1:8787`.
+
+Se quiser desativar o dashboard integrado:
+
+```bash
+npm run monitor:no-dashboard
+```
 
 Para instalar com outro intervalo (exemplo 10 minutos):
 

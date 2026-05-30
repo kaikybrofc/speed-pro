@@ -7,12 +7,15 @@
     "speedtest": "python3 speedtest.py",
     "record": "python3 scripts/speedtest_record.py",
     "report": "python3 scripts/speedtest_report.py",
+    "dashboard": "python3 scripts/speedtest_dashboard.py",
+    "dashboard:lan": "python3 scripts/speedtest_dashboard.py --host 0.0.0.0 --port 8787",
     "monitor": "python3 scripts/speedtest_monitor.py --interval-minutes 30",
+    "monitor:no-dashboard": "python3 scripts/speedtest_monitor.py --interval-minutes 30 --no-dashboard",
     "monitor:install": "bash scripts/install_monitor_service.sh 30",
     "monitor:uninstall": "bash scripts/uninstall_monitor_service.sh",
     "monitor:status": "systemctl --user status speed-pro-monitor.service",
     "monitor:logs": "journalctl --user -u speed-pro-monitor.service -f",
-    "check": "python3 -m py_compile speedtest.py scripts/quality_metrics.py scripts/speedtest_record.py scripts/speedtest_report.py scripts/speedtest_monitor.py"
+    "check": "python3 -m py_compile speedtest.py scripts/quality_metrics.py scripts/speedtest_record.py scripts/speedtest_report.py scripts/speedtest_monitor.py scripts/speedtest_dashboard.py"
   },
   "keywords": [
     "speedtest",

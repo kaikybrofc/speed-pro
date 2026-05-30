@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import signal
+import subprocess
 import sys
 import threading
 import time
@@ -65,6 +66,36 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=0,
         help="Quantidade maxima de execucoes (0 = infinito).",
+    )
+    parser.add_argument(
+        "--dashboard",
+        dest="dashboard_enabled",
+        action="store_true",
+        default=True,
+        help="Inicia o dashboard local junto com o monitor (padrao: ativo).",
+    )
+    parser.add_argument(
+        "--no-dashboard",
+        dest="dashboard_enabled",
+        action="store_false",
+        help="Nao inicia o dashboard local.",
+    )
+    parser.add_argument(
+        "--dashboard-host",
+        default="127.0.0.1",
+        help="Host do dashboard local (padrao: 127.0.0.1).",
+    )
+    parser.add_argument(
+        "--dashboard-port",
+        type=int,
+        default=8787,
+        help="Porta do dashboard local (padrao: 8787).",
+    )
+    parser.add_argument(
+        "--dashboard-history-limit",
+        type=int,
+        default=360,
+        help="Limite de pontos servidos pelo dashboard.",
     )
     parser.add_argument(
         "--plan",
@@ -149,6 +180,10 @@ def parse_args() -> argparse.Namespace:
         parser.error("--ping-timeout deve ser maior que zero.")
     if args.sla_window_minutes <= 0:
         parser.error("--sla-window-minutes deve ser maior que zero.")
+    if not (1 <= args.dashboard_port <= 65535):
+        parser.error("--dashboard-port deve estar entre 1 e 65535.")
+    if args.dashboard_history_limit <= 0:
+        parser.error("--dashboard-history-limit deve ser maior que zero.")
 
     return args
 
@@ -178,6 +213,57 @@ def wait_or_stop(stop_event: threading.Event, seconds: float) -> bool:
             return True
         time.sleep(min(1.0, remaining))
     return False
+
+
+def start_dashboard_process(args: argparse.Namespace) -> Optional[subprocess.Popen]:
+    if not args.dashboard_enabled:
+        log("Dashboard integrado desativado (--no-dashboard).")
+        return None
+
+    dashboard_script = ROOT_DIR / "scripts" / "speedtest_dashboard.py"
+    cmd = [
+        sys.executable,
+        str(dashboard_script),
+        "--host",
+        args.dashboard_host,
+        "--port",
+        str(args.dashboard_port),
+        "--history-limit",
+        str(args.dashboard_history_limit),
+    ]
+    try:
+        proc = subprocess.Popen(cmd, cwd=str(ROOT_DIR))
+    except Exception as exc:  # pylint: disable=broad-except
+        log(f"Falha ao iniciar dashboard integrado: {exc}")
+        return None
+
+    time.sleep(0.4)
+    if proc.poll() is not None:
+        log(
+            "Dashboard integrado encerrou logo apos iniciar. "
+            "Continuando apenas com monitor."
+        )
+        return None
+
+    log(
+        "Dashboard integrado ativo em "
+        f"http://{args.dashboard_host}:{args.dashboard_port}"
+    )
+    return proc
+
+
+def stop_dashboard_process(proc: Optional[subprocess.Popen]) -> None:
+    if proc is None:
+        return
+    if proc.poll() is not None:
+        return
+
+    proc.terminate()
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait(timeout=2)
 
 
 def evaluate_sla_bad(
@@ -262,6 +348,7 @@ def main() -> int:
         "bad_started_at": None,
         "alerted": False,
     }
+    dashboard_proc: Optional[subprocess.Popen] = None
 
     def _handle_signal(signum: int, _frame) -> None:
         signal_name = signal.Signals(signum).name
@@ -285,38 +372,42 @@ def main() -> int:
             f"window={args.sla_window_minutes}min."
         )
 
-    first_wait = args.initial_delay_seconds
-    if args.no_immediate:
-        first_wait += interval_seconds
-    if first_wait > 0:
-        log(
-            "Aguardando "
-            f"{first_wait:.0f} segundo(s) antes da primeira execucao..."
-        )
-        if not wait_or_stop(stop_event, first_wait):
-            return 0
-
-    run_count = 0
-    while not stop_event.is_set():
-        run_count += 1
-        log(f"Iniciando teste #{run_count}...")
-        code, record = run_record_once(args)
-        if code == 0:
-            log(f"Teste #{run_count} concluido com sucesso.")
-            if args.sla_mode and record is not None:
-                run_sla_logic(record=record, args=args, state=sla_state)
-        else:
+    dashboard_proc = start_dashboard_process(args)
+    try:
+        first_wait = args.initial_delay_seconds
+        if args.no_immediate:
+            first_wait += interval_seconds
+        if first_wait > 0:
             log(
-                f"Teste #{run_count} finalizado com erro (codigo {code}). "
-                "Nova tentativa sera feita no proximo ciclo."
+                "Aguardando "
+                f"{first_wait:.0f} segundo(s) antes da primeira execucao..."
             )
+            if not wait_or_stop(stop_event, first_wait):
+                return 0
 
-        if args.max_runs and run_count >= args.max_runs:
-            log(f"Limite de execucoes atingido ({args.max_runs}). Encerrando.")
-            break
+        run_count = 0
+        while not stop_event.is_set():
+            run_count += 1
+            log(f"Iniciando teste #{run_count}...")
+            code, record = run_record_once(args)
+            if code == 0:
+                log(f"Teste #{run_count} concluido com sucesso.")
+                if args.sla_mode and record is not None:
+                    run_sla_logic(record=record, args=args, state=sla_state)
+            else:
+                log(
+                    f"Teste #{run_count} finalizado com erro (codigo {code}). "
+                    "Nova tentativa sera feita no proximo ciclo."
+                )
 
-        if not wait_or_stop(stop_event, interval_seconds):
-            break
+            if args.max_runs and run_count >= args.max_runs:
+                log(f"Limite de execucoes atingido ({args.max_runs}). Encerrando.")
+                break
+
+            if not wait_or_stop(stop_event, interval_seconds):
+                break
+    finally:
+        stop_dashboard_process(dashboard_proc)
 
     log("Monitor finalizado.")
     return 0

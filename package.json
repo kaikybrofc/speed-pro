@@ -5,7 +5,9 @@
   "scripts": {
     "start": "python3 speedtest.py",
     "speedtest": "python3 speedtest.py",
-    "check": "python3 -m py_compile speedtest.py"
+    "record": "python3 scripts/speedtest_record.py",
+    "report": "python3 scripts/speedtest_report.py",
+    "check": "python3 -m py_compile speedtest.py scripts/speedtest_record.py scripts/speedtest_report.py"
   },
   "keywords": [
     "speedtest",

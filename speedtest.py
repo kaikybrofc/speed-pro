@@ -49,6 +49,11 @@ class FakeShutdownEvent(object):
         "Dummy method to always return false"""
         return False
 
+    @staticmethod
+    def is_set():
+        "Dummy method to always return false"""
+        return False
+
 
 # Some global variables we use
 DEBUG = False
@@ -764,12 +769,33 @@ def get_attributes_by_tag_name(dom, tag_name):
     return dict(list(elem.attributes.items()))
 
 
+def event_is_set(event):
+    """Compatibility wrapper for threading.Event state checks"""
+    try:
+        return event.is_set()
+    except AttributeError:
+        return event.isSet()
+
+
+def utc_iso_timestamp():
+    """Return an ISO-8601 UTC timestamp ending in Z"""
+    if hasattr(datetime, 'UTC'):
+        return datetime.datetime.now(
+            datetime.UTC
+        ).isoformat().replace('+00:00', 'Z')
+    if hasattr(datetime, 'timezone'):
+        return datetime.datetime.now(
+            datetime.timezone.utc
+        ).isoformat().replace('+00:00', 'Z')
+    return '%sZ' % datetime.datetime.utcnow().isoformat()
+
+
 def print_dots(shutdown_event):
     """Built in callback function used by Thread classes for printing
     status
     """
     def inner(current, total, start=False, end=False):
-        if shutdown_event.isSet():
+        if event_is_set(shutdown_event):
             return
 
         sys.stdout.write('.')
@@ -808,7 +834,7 @@ class HTTPDownloader(threading.Thread):
         try:
             if (timeit.default_timer() - self.starttime) <= self.timeout:
                 f = self._opener(self.request)
-                while (not self._shutdown_event.isSet() and
+                while (not event_is_set(self._shutdown_event) and
                         (timeit.default_timer() - self.starttime) <=
                         self.timeout):
                     self.result.append(len(f.read(10240)))
@@ -864,7 +890,7 @@ class HTTPUploaderData(object):
 
     def read(self, n=10240):
         if ((timeit.default_timer() - self.start) <= self.timeout and
-                not self._shutdown_event.isSet()):
+                not event_is_set(self._shutdown_event)):
             chunk = self.data.read(n)
             self.total.append(len(chunk))
             return chunk
@@ -902,7 +928,7 @@ class HTTPUploader(threading.Thread):
         request = self.request
         try:
             if ((timeit.default_timer() - self.starttime) <= self.timeout and
-                    not self._shutdown_event.isSet()):
+                    not event_is_set(self._shutdown_event)):
                 try:
                     f = self._opener(request)
                 except TypeError:
@@ -948,7 +974,7 @@ class SpeedtestResults(object):
         self.client = client or {}
 
         self._share = None
-        self.timestamp = '%sZ' % datetime.datetime.utcnow().isoformat()
+        self.timestamp = utc_iso_timestamp()
         self.bytes_received = 0
         self.bytes_sent = 0
 

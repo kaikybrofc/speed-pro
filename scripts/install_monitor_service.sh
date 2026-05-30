@@ -29,6 +29,11 @@ mkdir -p "$SYSTEMD_USER_DIR"
 mkdir -p "$(dirname "$LINK_PATH")"
 ln -sfn "$PROJECT_DIR" "$LINK_PATH"
 
+SERVICE_WAS_ACTIVE="false"
+if systemctl --user is-active --quiet "$SERVICE_NAME"; then
+  SERVICE_WAS_ACTIVE="true"
+fi
+
 cat >"$SERVICE_PATH" <<EOF
 [Unit]
 Description=Speed Pro Monitor
@@ -49,9 +54,17 @@ WantedBy=default.target
 EOF
 
 systemctl --user daemon-reload
-systemctl --user enable --now "$SERVICE_NAME"
+systemctl --user enable "$SERVICE_NAME" >/dev/null
 
-echo "Servico instalado e iniciado: $SERVICE_NAME"
+if [ "$SERVICE_WAS_ACTIVE" = "true" ]; then
+  systemctl --user restart "$SERVICE_NAME"
+  SERVICE_ACTION="reiniciado"
+else
+  systemctl --user start "$SERVICE_NAME"
+  SERVICE_ACTION="iniciado"
+fi
+
+echo "Servico instalado e $SERVICE_ACTION: $SERVICE_NAME"
 echo "Intervalo configurado: $INTERVAL_MINUTES minuto(s)"
 echo "Status: systemctl --user status $SERVICE_NAME"
 echo "Logs:   journalctl --user -u $SERVICE_NAME -f"
